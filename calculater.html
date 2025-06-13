@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Modern Calculator</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap');
+
+  * {
+    box-sizing: border-box;
+  }
+  body {
+    background: linear-gradient(135deg, #232526, #434343);
+    font-family: 'Inter', sans-serif;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    margin: 0;
+    padding: 16px;
+  }
+
+  .calculator {
+    background: rgba(30, 30, 30, 0.85);
+    border-radius: 24px;
+    box-shadow: 0 16px 32px rgba(0, 0, 0, 0.7);
+    width: 360px;
+    max-width: 100vw;
+    display: grid;
+    grid-template-rows: 120px auto;
+    padding: 16px;
+    gap: 24px;
+  }
+
+  .display {
+    background: rgba(0,0,0,0.6);
+    border-radius: 20px;
+    padding: 24px 32px;
+    font-size: 2.8rem;
+    color: #eee;
+    text-align: right;
+    overflow-wrap: break-word;
+    box-shadow: inset 0 2px 8px rgba(255,255,255,0.1);
+    user-select: none;
+  }
+
+  .buttons {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+  }
+
+  button {
+    background: linear-gradient(135deg, #393e46, #222831);
+    border: none;
+    border-radius: 16px;
+    color: #eee;
+    font-size: 1.6rem;
+    padding: 20px 0;
+    font-weight: 600;
+    box-shadow: 0 6px 10px rgba(0,0,0,0.5);
+    cursor: pointer;
+    transition: background-color 0.25s ease, transform 0.15s ease;
+    user-select: none;
+  }
+
+  button:hover,
+  button:focus-visible {
+    background: linear-gradient(135deg, #00adb5, #007778);
+    outline: none;
+    transform: scale(1.05);
+  }
+
+  button.operator {
+    background: linear-gradient(135deg, #00adb5, #007778);
+    color: #fff;
+  }
+
+  button.operator:hover,
+  button.operator:focus-visible {
+    background: linear-gradient(135deg, #00e3ff, #00979e);
+    transform: scale(1.05);
+  }
+
+  button.zero {
+    grid-column: span 2;
+  }
+
+  /* Responsive fonts */
+  @media (max-width: 400px) {
+    .calculator {
+      width: 100%;
+      padding: 12px;
+      gap: 16px;
+    }
+    .display {
+      font-size: 2.2rem;
+      padding: 20px 24px;
+    }
+    button {
+      font-size: 1.4rem;
+      padding: 16px 0;
+    }
+  }
+</style>
+</head>
+<body>
+<div class="calculator" role="application" aria-label="Calculator">
+  <div id="display" class="display" aria-live="polite" aria-atomic="true">0</div>
+  <div class="buttons">
+    <button type="button" aria-label="Clear" id="clear">C</button>
+    <button type="button" aria-label="Delete" id="del">⌫</button>
+    <button type="button" aria-label="Percentage" class="operator" data-action="%">%</button>
+    <button type="button" aria-label="Divide" class="operator" data-action="/">÷</button>
+
+    <button type="button" aria-label="7" data-number="7">7</button>
+    <button type="button" aria-label="8" data-number="8">8</button>
+    <button type="button" aria-label="9" data-number="9">9</button>
+    <button type="button" aria-label="Multiply" class="operator" data-action="*">×</button>
+
+    <button type="button" aria-label="4" data-number="4">4</button>
+    <button type="button" aria-label="5" data-number="5">5</button>
+    <button type="button" aria-label="6" data-number="6">6</button>
+    <button type="button" aria-label="Subtract" class="operator" data-action="-">−</button>
+
+    <button type="button" aria-label="1" data-number="1">1</button>
+    <button type="button" aria-label="2" data-number="2">2</button>
+    <button type="button" aria-label="3" data-number="3">3</button>
+    <button type="button" aria-label="Add" class="operator" data-action="+">+</button>
+
+    <button type="button" aria-label="0" class="zero" data-number="0">0</button>
+    <button type="button" aria-label="Decimal point" data-number=".">.</button>
+    <button type="button" aria-label="Equals" class="operator" id="equals" data-action="=">=</button>
+  </div>
+</div>
+<script>
+  (() => {
+    const display = document.getElementById('display');
+    let currentInput = '0';
+    let previousInput = null;
+    let operator = null;
+    let resetNext = false;
+
+    function updateDisplay() {
+      display.textContent = currentInput;
+    }
+
+    function clearAll() {
+      currentInput = '0';
+      previousInput = null;
+      operator = null;
+      resetNext = false;
+      updateDisplay();
+    }
+
+    function deleteLast() {
+      if (resetNext) {
+        clearAll();
+        return;
+      }
+      if (currentInput.length === 1) {
+        currentInput = '0';
+      } else {
+        currentInput = currentInput.slice(0, -1);
+      }
+      updateDisplay();
+    }
+
+    function appendNumber(number) {
+      if(resetNext){
+        currentInput = number === '.' ? '0.' : number;
+        resetNext = false;
+        updateDisplay();
+        return;
+      }
+
+      // Prevent multiple decimals
+      if(number === '.' && currentInput.includes('.')) return;
+
+      if(currentInput === '0' && number !== '.') {
+        currentInput = number;
+      } else {
+        currentInput += number;
+      }
+      updateDisplay();
+    }
+
+    function chooseOperator(op) {
+      if (operator !== null && !resetNext) {
+        compute();
+      }
+
+      previousInput = currentInput;
+      operator = op;
+      resetNext = true;
+    }
+
+    function compute() {
+      let computation;
+      const prev = parseFloat(previousInput);
+      const current = parseFloat(currentInput);
+      if (isNaN(prev) || isNaN(current)) return;
+
+      switch(operator) {
+        case '+':
+          computation = prev + current;
+          break;
+        case '-':
+          computation = prev - current;
+          break;
+        case '*':
+          computation = prev * current;
+          break;
+        case '/':
+          if(current === 0) {
+            computation = 'Error';
+            break;
+          }
+          computation = prev / current;
+          break;
+        case '%':
+          computation = prev * (current / 100);
+          break;
+        default:
+          return;
+      }
+      currentInput = computation.toString();
+      operator = null;
+      previousInput = null;
+      resetNext = true;
+      updateDisplay();
+    }
+
+    function handleButtonClick(e) {
+      const target = e.target;
+      if (target.tagName !== 'BUTTON') return;
+
+      if (target.id === 'clear') {
+        clearAll();
+        return;
+      }
+      if (target.id === 'del') {
+        deleteLast();
+        return;
+      }
+
+      if (target.dataset.number !== undefined) {
+        appendNumber(target.dataset.number);
+        return;
+      }
+
+      if (target.dataset.action !== undefined) {
+        const action = target.dataset.action;
+        if (action === '=') {
+          compute();
+        } else {
+          chooseOperator(action);
+        }
+      }
+    }
+
+    document.querySelector('.buttons').addEventListener('click', handleButtonClick);
+
+    // Keyboard support
+    window.addEventListener('keydown', e => {
+      if (e.repeat) return;
+      if (e.key >= '0' && e.key <= '9') {
+        appendNumber(e.key);
+      } else if (e.key === '.') {
+        appendNumber(e.key);
+      } else if (['+', '-', '*', '/'].includes(e.key)) {
+        chooseOperator(e.key);
+      } else if (e.key === 'Enter' || e.key === '=') {
+        e.preventDefault();
+        compute();
+      } else if (e.key === 'Backspace') {
+        deleteLast();
+      } else if (e.key.toLowerCase() === 'c') {
+        clearAll();
+      } else if (e.key === '%') {
+        chooseOperator('%');
+      }
+    });
+  })();
+</script>
+</body>
+</html>
+
